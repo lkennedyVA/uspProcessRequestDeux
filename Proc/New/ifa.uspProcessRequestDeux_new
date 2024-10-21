@@ -1,10 +1,10 @@
---USE [IFA]
---GO
---/****** Object:  StoredProcedure [ifa].[uspProcessRequestDeux]    Script Date: 10/18/2024 10:10:13 AM ******/
---SET ANSI_NULLS ON
---GO
---SET QUOTED_IDENTIFIER ON
---GO
+USE [IFA]
+GO
+/****** Object:  StoredProcedure [ifa].[uspProcessRequestDeux_new]    Script Date: 10/21/2024 10:48:37 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 /****************************************************************************************
 	Name: [ifa].[uspProcessRequestDeux]
 	CreatedBy: Larry Dugger
@@ -61,37 +61,38 @@
 			(D2C) into MiscType output set. D2C is the prefix for that data.
 		2023-03-24 - LBD - VALID-866. Adjust MDMtoCIF
 *****************************************************************************************/
-CREATE   PROCEDURE [ifa].[uspProcessRequestDeux_new](
+ALTER   PROCEDURE [ifa].[uspProcessRequestDeux_new](
+
 	@piProcessTypeId INT								 
-	,@piOrgId INT										--This is the system id for transaction processing
+	,@piOrgId INT											--This is the system id for transaction processing
 	,@piUserId INT										
-	,@pnvProcessKey NVARCHAR(25)						--This is 'TransactionKey' that is passed to the client, you use to link all activity 
+	,@pnvProcessKey VARCHAR(25)							    --This is 'TransactionKey' that is passed to the client, you use to link all activity 
 	,@pnvClientRequestId NVARCHAR(50)
 	,@pnvClientRequestId2 NVARCHAR(50)
-	,@pnvCustomerIdentifier NVARCHAR(50)				--Clients identifier for a customer, must be present if other customer info
-	,@pnvFirstName NVARCHAR(50)
-	,@pnvLastName NVARCHAR(50)
-	,@pnvAddressLine1 NVARCHAR(150)
-	,@pnvAddressLine2 NVARCHAR(150)
-	,@pnvCity NVARCHAR(100)
-	,@pnvStateAbbv NCHAR(2)								--TX
-	,@pnvZipCode NVARCHAR(9)							--761020234
-	,@pnvCountry NVARCHAR(50)
-	,@pnvPhoneNumber NVARCHAR(10)						--8176123456
-	,@pnvEmailAddress NVARCHAR(100)
-	,@pdDateOfBirth DATE								--date
-	,@pnvIdTypeCode NVARCHAR(25)						--Currently 2 for DL
-	,@pnvIdNumber NVARCHAR(50)							--123456789
-	,@pnvIdStateAbbv NCHAR(2)							--TX
-	,@pnvSocialSecurityNumber NVARCHAR(9)				--123456789
-	,@pnvBankAccountType NVARCHAR(25)					--Code found in [common].[AccountType]
-	,@pncBankRoutingNumber NCHAR(9)						--123456789
-	,@pnvBankAccountNumber NVARCHAR(50)		
-	,@pnvUserName NVARCHAR(100) = 'N/A'
+	,@pnvCustomerIdentifier NVARCHAR(50)					--Clients identifier for a customer, must be present if other customer info
+	,@pnvFirstName VARCHAR(50)
+	,@pnvLastName VARCHAR(50)
+	,@pnvAddressLine1 VARCHAR(150)
+	,@pnvAddressLine2 VARCHAR(150)
+	,@pnvCity VARCHAR(100)
+	,@pnvStateAbbv VARCHAR(2)								--TX
+	,@pnvZipCode VARCHAR(9)									--761020234
+	,@pnvCountry VARCHAR(50)
+	,@pnvPhoneNumber VARCHAR(10)							--8176123456
+	,@pnvEmailAddress VARCHAR(100)
+	,@pdDateOfBirth DATE									--date
+	,@pnvIdTypeCode NVARCHAR(25)							--Currently 2 for DL
+	,@pnvIdNumber VARCHAR(50)								--123456789
+	,@pnvIdStateAbbv VARCHAR(2)								--TX
+	,@pnvSocialSecurityNumber VARCHAR(9)					--123456789
+	,@pnvBankAccountType VARCHAR(25)						--Code found in [common].[AccountType]
+	,@pncBankRoutingNumber VARCHAR(9)						--123456789
+	,@pnvBankAccountNumber VARCHAR(50)		
+	,@pnvUserName VARCHAR(100) = 'N/A'
 	,@ptblItemRequest [ifa].[ItemRequestType] READONLY
-	,@ptblAccountInfo [ifa].[AccountInfoType] READONLY	--current TextTypes are 'AccountInfo1','AccountInfo2'
-	,@ptblDeviceInfo [ifa].[DeviceInfoType] READONLY	--current DeviceTypes are 'Phone','Pad','PC'
-	,@ptblMiscInfo [ifa].[MiscInfoType] READONLY		--current TextTypes are 'MiscInfo1','MiscInfo2'
+	,@ptblAccountInfo [ifa].[AccountInfoType] READONLY	    --current TextTypes are 'AccountInfo1','AccountInfo2'
+	,@ptblDeviceInfo [ifa].[DeviceInfoType] READONLY	    --current DeviceTypes are 'Phone','Pad','PC'
+	,@ptblMiscInfo [ifa].[MiscInfoType] READONLY		    --current TextTypes are 'MiscInfo1','MiscInfo2'
 )
 AS
 BEGIN
@@ -125,7 +126,6 @@ BEGIN
 			,@biMiscInfoId bigint
 			,@iProcessMethodology int
 			,@iProcessTypeId int = @piProcessTypeId 
-			--2022-03-10 ,@iStatUmbrellaOrgTypeId int
 			,@iStatUmbrellaOrgId int --2022-03-10
 			,@nvStatQueryingField nvarchar(50)
 			,@bIncludeMiscFieldInStats bit
@@ -157,76 +157,97 @@ BEGIN
 			SET @dtTimerDate = SYSDATETIME();
 		END
 
-		--DECLARE --@tblDecisionField [ifa].[DecisionFieldType]
-			--,@tblItem [ifa].[ItemType]
-			--,@tblMiscStat [ifa].[MiscStatType]
-			--,@tblItemStat [ifa].[ItemStatType]
-			--,@tblItemStatRPFlow [ifa].[ItemStatType];
 --@tblDecisionField
+drop table if exists #tblDecisionField
 CREATE TABLE #tblDecisionField
 (
     CustomerId BIGINT,
-    CustomerIdentifier NVARCHAR(50),
+    CustomerIdentifier VARCHAR(50),
     PrimaryIdTypeId INT,
     Debug BIT,
-    DLNumber NVARCHAR(50),
+    DLNumber VARCHAR(50),
     DLStateAbbr NCHAR(2),
-    IdMac64 NVARCHAR(256),
-    InternalBankAccountNumber NVARCHAR(50),
+    IdMac64 VARCHAR(256),
+    InternalBankAccountNumber VARCHAR(50),
     ItemCount INT,
-    MaxItemsExceeded BIT
+    MaxItemsExceeded BIT,
+	OrgChannelName VARCHAR(50), 
+	OrgClientExternalCode VARCHAR(50), 
+	OrgClientId INT, 
+	OrgCode VARCHAR(50), 
+	OrgDistance VARCHAR(2), 
+	OrgExternalCode VARCHAR(50), 
+	OrgId INT, 
+	OrgLatitude VARCHAR(11),
+    OrgLongitude VARCHAR(11), 
+	OrgName VARCHAR(100), 
+	OrgParentId INT, 
+	OrgState VARCHAR(2), 
+	OrgZipCode VARCHAR(9), 
+	ProcessDateActivated DATETIME, 
+	ProcessId BIGINT, 
+	ProcessKey NCHAR(25), 
+	ProcessMethodology INT, 
+	StatusFlag BIT, 
+	UserName VARCHAR(100)
 );
 --@tblItem
+drop table if exists #tblItem
 CREATE TABLE #tblItem
 (
     ItemId BIGINT,
     ProcessId BIGINT,
-    ClientItemId NVARCHAR(50),
-    ItemKey NVARCHAR(25),
-    RuleBreak NVARCHAR(25),
-    RuleBreakResponse NVARCHAR(255),
+    ClientItemId VARCHAR(50),
+    ItemKey VARCHAR(25),
+    RuleBreak VARCHAR(25),
+    RuleBreakResponse VARCHAR(255),
     CheckAmount MONEY,
-    UserName NVARCHAR(100)
+    UserName VARCHAR(100)
 );
 --@tblMiscStat
+drop table if exists #tblMiscStat
 CREATE TABLE #tblMiscStat
 (
-    StatName NVARCHAR(128),
-    StatValue NVARCHAR(100)
+    StatName VARCHAR(128),
+    StatValue VARCHAR(100)
 );
 --@tblItemStat
+drop table if exists #tblItemStat
 CREATE TABLE #tblItemStat
 (
     ItemId BIGINT,
-    StatName NVARCHAR(128),
-    StatValue NVARCHAR(100)
+    StatName VARCHAR(128),
+    StatValue VARCHAR(100)
 );
 --@tblItemStatRPFlow
+drop table if exists #tblItemStatRPFlow
 CREATE TABLE #tblItemStatRPFlow
 (
     ItemId BIGINT,
-    StatName NVARCHAR(128),
-    StatValue NVARCHAR(100)
+    StatName VARCHAR(128),
+    StatValue VARCHAR(100)
 );
 
 --@tblItemStat0
+drop table if exists #tblItemStat0
 CREATE TABLE #tblItemStat0
 (
     ItemId BIGINT,
-    StatName NVARCHAR(128),
-    StatValue NVARCHAR(100),
+    StatName VARCHAR(128),
+    StatValue VARCHAR(100),
     DR1PO INT,
     DR2PO INT
 );
 --@tblIdResult
+drop table if exists #tblIdResult
 CREATE TABLE #tblIdResult
 (
     ResultId SMALLINT IDENTITY(1,1),
     OrgId INT,
-    Id NVARCHAR(50),
+    Id VARCHAR(50),
     IdEncrypted VARBINARY(250),
     IdTypeId INT,
-    IdTypeCode NVARCHAR(25),
+    IdTypeCode VARCHAR(25),
     IdStateId INT,
     IdStateCode NCHAR(2),
     PrimaryId INT,
@@ -237,40 +258,44 @@ CREATE TABLE #tblIdResult
 );
 
 --@tblIdType
+drop table if exists #tblIdType
 CREATE TABLE #tblIdType
 (
     IdTypeId INT,
-    IdTypeName NVARCHAR(50),
-    IdTypeCode NVARCHAR(25)
+    IdTypeName VARCHAR(50),
+    IdTypeCode VARCHAR(25)
 );
 --@tblRuleBreakData
+drop table if exists #tblRuleBreakData
 CREATE TABLE #tblRuleBreakData
 (
     ItemId BIGINT,
-    Code NVARCHAR(25),
-    Message NVARCHAR(255)
+    Code VARCHAR(25),
+    [Message] VARCHAR(255)
 );
 --@tblOL
+drop table if exists #tblOL
 CREATE TABLE #tblOL
 (
     LevelId INT,
     RelatedOrgId INT,
     OrgId INT,
-    OrgCode NVARCHAR(50),
-    OrgName NVARCHAR(100),
-    ExternalCode NVARCHAR(50),
-    OrgDescr NVARCHAR(255),
+    OrgCode VARCHAR(50),
+    OrgName VARCHAR(100),
+    ExternalCode VARCHAR(50),
+    OrgDescr VARCHAR(255),
     OrgTypeId INT,
-    Type NVARCHAR(50),
+    [Type] VARCHAR(50),
     StatusFlag INT
 );
 --@tblCustomerIdType
+drop table if exists #tblCustomerIdType
 CREATE TABLE #tblCustomerIdType
 (
     OrgId INT,
-    Id NVARCHAR(50),
+    Id VARCHAR(50),
     IdTypeId INT,
-    IdTypeCode NVARCHAR(25),
+    IdTypeCode VARCHAR(25),
     IdStateId INT,
     IdStateCode NCHAR(2),
     PrimaryId INT,
@@ -279,18 +304,77 @@ CREATE TABLE #tblCustomerIdType
 );
 
 		--load the acceptable IdTypes
-		INSERT INTO #tblIdType(IdTypeId,IdTypeName,IdTypeCode)
-		SELECT IdTypeId,IdTypeName,IdTypeCode
-		FROM [common].[ufnOrgIdTypeXrefByOrgId](@piOrgId);
+WITH OrgCTE AS (
+    SELECT 
+        oitx.OrgIdTypeXrefId,
+        uol.LevelId,
+        uol.ChildId AS ParentId,
+        uol.OrgId,
+        uol.OrgName,
+        oitx.IdTypeId,
+        ct.Code AS IdTypeCode,
+        ct.Name AS IdTypeName,
+        oitx.StatusFlag,
+        oitx.DateActivated,
+        oitx.UserName
+    FROM [common].[ufnUpDimensionByOrgIdILTF](@piOrgId, [common].[ufnDimension]('Organization')) AS uol
+    INNER JOIN [organization].[OrgIdTypeXref] oitx ON uol.OrgId = oitx.OrgId
+    INNER JOIN [common].[IdType] ct ON oitx.IdTypeId = ct.IdTypeId
+    WHERE 
+        oitx.DateActivated <= SYSDATETIME()
+        AND oitx.StatusFlag > 0
+        AND ct.DateActivated <= SYSDATETIME()
+        AND ct.StatusFlag = 1
+)
+INSERT INTO #tblIdType (IdTypeId, IdTypeName, IdTypeCode)
+SELECT 
+    octe.IdTypeId,
+    octe.IdTypeName,
+    octe.IdTypeCode
+FROM OrgCTE AS octe
+WHERE 
+    -- Remove organizations above any org with StatusFlag set to 2
+    (NOT EXISTS (
+        SELECT 1
+        FROM OrgCTE AS parent
+        WHERE parent.StatusFlag = 2
+          AND octe.LevelId < parent.LevelId
+    ) OR octe.OrgId = @piOrgId)
+
+    -- Exclude any records where StatusFlag = 3
+    AND NOT EXISTS (
+        SELECT 1
+        FROM OrgCTE AS inactive
+        WHERE inactive.StatusFlag = 3
+    )
+
+    -- Overlay by grandparent if StatusFlag = 4
+    AND NOT EXISTS (
+        SELECT 1
+        FROM OrgCTE AS grandparent
+        WHERE octe.IdTypeId = grandparent.IdTypeId
+          AND octe.LevelId > grandparent.LevelId
+          AND grandparent.StatusFlag = 4
+          AND grandparent.OrgId = @piOrgId
+    )
+
+    -- Overlay any parent if StatusFlag = 1
+    AND NOT EXISTS (
+        SELECT 1
+        FROM OrgCTE AS parent
+        WHERE octe.IdTypeId = parent.IdTypeId
+          AND octe.LevelId < parent.LevelId
+          AND parent.StatusFlag = 1
+    );
 
 		--SET FROM AVAIABLE TO @piOrgId
 		SELECT @iIdNumberIdTypeId = IdTypeId FROM #tblIdType WHERE IdTypeCode = @pnvIdTypeCode; --2020-12-29 
 		SELECT @iSocialSecurityNumberIdTypeId = IdTypeId FROM #tblIdType WHERE IdTypeName = 'Social Security Number';
 		SELECT @iClientProvidedIdTypeId = IdTypeId FROM #tblIdType WHERE IdTypeName = 'Client Provided Identifier';
 
-		INSERT INTO #tblOL (LevelId, RelatedOrgId, OrgId, OrgCode, OrgName, ExternalCode, OrgDescr, OrgTypeId, [Type], StatusFlag)
-		SELECT LevelId, ChildId, OrgId, OrgCode, OrgName, ExternalCode, OrgDescr, TypeId, [Type], StatusFlag
-		FROM [common].[ufnUpDimensionByOrgIdILTF](@piOrgId,@iOrgDimensionId); 
+INSERT INTO #tblOL (LevelId, RelatedOrgId, OrgId, OrgCode, OrgName, ExternalCode, OrgDescr, OrgTypeId, [Type], StatusFlag)
+SELECT LevelId, ChildId AS RelatedOrgId, OrgId, OrgCode, OrgName, ExternalCode, OrgDescr, TypeId AS OrgTypeId, [Type], StatusFlag
+FROM [common].[ufnUpDimensionByOrgIdILTF](@piOrgId, @iOrgDimensionId);
 
 		SELECT @iOrgClientId = Orgid
 			,@bPNCClient = CASE WHEN ExternalCode = 'PNC' THEN 1 ELSE 0 END --2023-03-24
@@ -379,9 +463,9 @@ ORDER BY ol.LevelId DESC;
 			RETURN
 		END
 
-		--LOAD the Id(s) into a structure to handle below
+		--LOAD the Id(s) into a structure to handle below, this involves encryption, not changing
 		INSERT INTO #tblCustomerIdType ([OrgId], [Id], [IdTypeId], [IdTypeCode], [IdStateId], [IdStateCode], [PrimaryId],[IdMac],[IdMac64])
-		SELECT @iOrgClientId,@nvCustomerIdentifier,@iClientProvidedIdTypeId,CONVERT(nvarchar(25),@iClientProvidedIdTypeId),0,N'Un'
+		SELECT @iOrgClientId, @nvCustomerIdentifier, @iClientProvidedIdTypeId, CONVERT(nvarchar(25),@iClientProvidedIdTypeId), 0, N'Un'
 			,CASE WHEN @iPrimaryIdTypeId = @iClientProvidedIdTypeId THEN 1 ELSE 0 END
 			,[ifa].[ufnMac](@nvCustomerIdentifier)
 			,[ifa].[ufnIdMac64](@iClientProvidedIdTypeId, @iOrgClientId, 0, @nvCustomerIdentifier)
@@ -539,7 +623,8 @@ customer.CustomerIdXref cix ON it.IdMac64 = cix.IdMac64 AND cix.StatusFlag = 1;
 						,@piOrgId=@iOrgId
 						,@piStatusFlag=@iStatusFlag
 						,@pnvUserName = @pnvUserName
-						,@pbiCustomerIdXrefId=@biCustomerIdXrefId OUTPUT;		
+						,@pbiCustomerIdXrefId=@biCustomerIdXrefId OUTPUT;	
+						
 					UPDATE #tblIdResult SET CustomerIdXrefId = @biCustomerIdXrefId WHERE IdTypeId = @iIdTypeId;
 					IF @iLogLevel > 1
 					BEGIN
@@ -740,10 +825,28 @@ WHERE o.OrgId = @piOrgId
 				(N'D2CZipCode',@pnvZipCode);
 		END
 		--NOW Risk Process Item(s) One at a time
+		--changing local temp table to  UDTT variables for store procedure execution and avoiding changing code in proc as well.
+		DECLARE @udttDecisionField [ifa].[DecisionFieldType];
+		DECLARE @udttMiscStat [ifa].[MiscStatType];
+		INSERT INTO @udttDecisionField (CustomerId, CustomerIdentifier, PrimaryIdTypeId, Debug, DLNumber, DLStateAbbr, IdMac64, InternalBankAccountNumber, ItemCount,
+		MaxItemsExceeded, OrgChannelName, OrgClientExternalCode, OrgClientId, OrgCode, OrgDistance, OrgExternalCode, OrgId, 
+		OrgLatitude, OrgLongitude, OrgName, OrgParentId, OrgState, OrgZipCode, ProcessDateActivated, ProcessId, ProcessKey, 
+		ProcessMethodology, StatusFlag, UserName)
+
+		SELECT CustomerId, CustomerIdentifier, PrimaryIdTypeId, Debug, DLNumber, DLStateAbbr, IdMac64, InternalBankAccountNumber, ItemCount,
+		MaxItemsExceeded, OrgChannelName, OrgClientExternalCode, OrgClientId, OrgCode, OrgDistance, OrgExternalCode, OrgId, 
+		OrgLatitude, OrgLongitude, OrgName, OrgParentId, OrgState, OrgZipCode, ProcessDateActivated, ProcessId, ProcessKey, 
+		ProcessMethodology, StatusFlag, UserName 
+		FROM #tblDecisionField;
+
+		INSERT INTO @udttMiscStat (StatName, StatValue)
+		SELECT StatName, StatValue
+		FROM #tblMiscStat;
+
 		EXECUTE [ifa].[uspItemMultiInsertOut]
-			@ptblDecisionField = #tblDecisionField
+			@ptblDecisionField = @udttDecisionField
 			,@ptblItemRequest = @ptblItemRequest
-			,@ptblMiscStat = #tblMiscStat
+			,@ptblMiscStat = @udttMiscStat
 			,@pbiItemId = @biItemId OUTPUT
 			,@pxTableSet = @xTableSet OUTPUT;
 		IF @biItemId < 0
@@ -825,9 +928,141 @@ WHERE o.OrgId = @piOrgId
 		WHERE RowId = 1;
 
 		--LOAD RiskProcessingFlow (Plugin Flow) structure
-		INSERT INTO #tblItemStatRPFlow(ItemId,StatName,StatValue)
-		SELECT ItemId, StatName, StatValue
-		FROM [riskprocessingflow].[ufnRiskProcessingFlow](#tblItem,#tblItemStat);
+-- Insert directly into the temporary table from an inline query
+INSERT INTO #tblItemStatRPFlow (ItemId, StatName, StatValue)
+SELECT DISTINCT 
+    i0.ItemId AS ItemId,
+    TRY_CONVERT(NVARCHAR(128), def.ResultStatName) AS StatName,
+    TRY_CONVERT(NVARCHAR(100), CASE WHEN def.GroupCnt = def.SumCompare AND def.GroupCnt > 0 THEN N'1' ELSE N'0' END) AS StatValue
+FROM #tblItemStat AS i0
+INNER JOIN (
+    SELECT 
+        abc.ItemId, 
+        abc.GroupCnt,
+        SUM(TRY_CONVERT(INT, abc.compare)) AS SumCompare, 
+        abc.ResultStatName
+    FROM (
+        SELECT 
+            i.ItemId, 
+            s.Name, 
+            g.GroupId, 
+            f.FilterStatId, 
+            f.FilterOperatorId, 
+            f.FilterValue, 
+            f.StatDataTypeId,
+            s.[Name] + ' ' + o.Code + ' ' + f.FilterValue AS clause, 
+            i.StatValue,
+            CASE 
+                WHEN sdt.[Name] = 'int' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(INT, i.StatValue) = TRY_CONVERT(INT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(INT, i.StatValue) > TRY_CONVERT(INT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(INT, i.StatValue) < TRY_CONVERT(INT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(INT, i.StatValue) >= TRY_CONVERT(INT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(INT, i.StatValue) <= TRY_CONVERT(INT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(INT, i.StatValue) <> TRY_CONVERT(INT, f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                WHEN sdt.[Name] = 'decimal(16,2)' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(DECIMAL(16,2), i.StatValue) = TRY_CONVERT(DECIMAL(16,2), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(DECIMAL(16,2), i.StatValue) > TRY_CONVERT(DECIMAL(16,2), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(DECIMAL(16,2), i.StatValue) < TRY_CONVERT(DECIMAL(16,2), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(DECIMAL(16,2), i.StatValue) >= TRY_CONVERT(DECIMAL(16,2), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(DECIMAL(16,2), i.StatValue) <= TRY_CONVERT(DECIMAL(16,2), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(DECIMAL(16,2), i.StatValue) <> TRY_CONVERT(DECIMAL(16,2), f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                WHEN sdt.[Name] = 'bigint' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(BIGINT, i.StatValue) = TRY_CONVERT(BIGINT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(BIGINT, i.StatValue) > TRY_CONVERT(BIGINT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(BIGINT, i.StatValue) < TRY_CONVERT(BIGINT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(BIGINT, i.StatValue) >= TRY_CONVERT(BIGINT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(BIGINT, i.StatValue) <= TRY_CONVERT(BIGINT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(BIGINT, i.StatValue) <> TRY_CONVERT(BIGINT, f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                WHEN sdt.[Name] = 'date' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(DATE, i.StatValue) = TRY_CONVERT(DATE, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(DATE, i.StatValue) > TRY_CONVERT(DATE, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(DATE, i.StatValue) < TRY_CONVERT(DATE, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(DATE, i.StatValue) >= TRY_CONVERT(DATE, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(DATE, i.StatValue) <= TRY_CONVERT(DATE, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(DATE, i.StatValue) <> TRY_CONVERT(DATE, f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                WHEN sdt.[Name] = 'bit' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(BIT, i.StatValue) = TRY_CONVERT(BIT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(BIT, i.StatValue) > TRY_CONVERT(BIT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(BIT, i.StatValue) < TRY_CONVERT(BIT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(BIT, i.StatValue) >= TRY_CONVERT(BIT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(BIT, i.StatValue) <= TRY_CONVERT(BIT, f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(BIT, i.StatValue) <> TRY_CONVERT(BIT, f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                WHEN sdt.[Name] = 'nchar(50)' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(NCHAR(50), i.StatValue) = TRY_CONVERT(NCHAR(50), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(NCHAR(50), i.StatValue) > TRY_CONVERT(NCHAR(50), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(NCHAR(50), i.StatValue) < TRY_CONVERT(NCHAR(50), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(NCHAR(50), i.StatValue) >= TRY_CONVERT(NCHAR(50), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(NCHAR(50), i.StatValue) <= TRY_CONVERT(NCHAR(50), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(NCHAR(50), i.StatValue) <> TRY_CONVERT(NCHAR(50), f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                WHEN sdt.[Name] = 'nchar(100)' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(NCHAR(100), i.StatValue) = TRY_CONVERT(NCHAR(100), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(NCHAR(100), i.StatValue) > TRY_CONVERT(NCHAR(100), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(NCHAR(100), i.StatValue) < TRY_CONVERT(NCHAR(100), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(NCHAR(100), i.StatValue) >= TRY_CONVERT(NCHAR(100), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(NCHAR(100), i.StatValue) <= TRY_CONVERT(NCHAR(100), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(NCHAR(100), i.StatValue) <> TRY_CONVERT(NCHAR(100), f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                WHEN sdt.[Name] = 'numeric(16,4)' THEN
+                    CASE 
+                        WHEN o.[Code] = N'=' AND TRY_CONVERT(NUMERIC(16,4), i.StatValue) = TRY_CONVERT(NUMERIC(16,4), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>' AND TRY_CONVERT(NUMERIC(16,4), i.StatValue) > TRY_CONVERT(NUMERIC(16,4), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<' AND TRY_CONVERT(NUMERIC(16,4), i.StatValue) < TRY_CONVERT(NUMERIC(16,4), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'>=' AND TRY_CONVERT(NUMERIC(16,4), i.StatValue) >= TRY_CONVERT(NUMERIC(16,4), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<=' AND TRY_CONVERT(NUMERIC(16,4), i.StatValue) <= TRY_CONVERT(NUMERIC(16,4), f.FilterValue) THEN N'1'
+                        WHEN o.[Code] = N'<>' AND TRY_CONVERT(NUMERIC(16,4), i.StatValue) <> TRY_CONVERT(NUMERIC(16,4), f.FilterValue) THEN N'1'
+                        ELSE N'0'
+                    END
+                ELSE N'0'
+            END AS compare,
+            gc.GroupCnt,
+            g.ResultStatId,
+            sr.[Name] AS ResultStatName
+        FROM #tblItemStat AS i
+        INNER JOIN #tblItem AS i1 ON i.ItemId = i1.ItemId
+        INNER JOIN [stat].[Stat] AS s ON i.StatName = s.[Name]
+        INNER JOIN [riskprocessingflow].[Filter] AS f ON s.StatId = f.FilterStatId
+        INNER JOIN [stat].[StatDataType] AS sdt ON f.StatDataTypeId = sdt.StatDataTypeId
+        INNER JOIN [riskprocessingflow].[GroupFilterXref] AS gfx ON f.FilterId = gfx.FilterId
+        INNER JOIN [riskprocessingflow].[Group] AS g ON gfx.GroupId = g.GroupId
+        INNER JOIN (
+            SELECT COUNT(*) AS GroupCnt, GroupId 
+            FROM [riskprocessingflow].[GroupFilterXref] 
+            GROUP BY GroupId
+        ) AS gc ON g.GroupId = gc.GroupId
+        INNER JOIN [riskprocessingflow].[Operator] AS o ON f.FilterOperatorId = o.OperatorId
+        INNER JOIN [stat].[Stat] AS sr ON g.ResultStatId = sr.StatId
+        WHERE g.StatusFlag = 1
+		AND g.DateActivated <= SYSDATETIME()
+		AND gfx.StatusFlag = 1
+		AND gfx.DateActivated <= SYSDATETIME()
+		AND f.StatusFlag = 1
+		AND f.DateActivated <= SYSDATETIME()
+    ) AS abc
+    GROUP BY abc.ItemId, abc.GroupId, abc.GroupCnt, abc.ResultStatName
+) AS def ON i0.ItemId = def.ItemId
+WHERE CASE WHEN def.GroupCnt = def.SumCompare AND def.GroupCnt > 0 THEN N'1' ELSE N'0' END = N'1';
+
 
 		INSERT INTO #tblItemStatRPFlow(ItemId,StatName,StatValue)
 		SELECT ItemId, N'_VaeBriskBypass',N'0'
